@@ -31,25 +31,91 @@ func main() {
 	}
 }
 
-func weirdIPv4(ip net.IP) {
-	fmt.Printf("%s\n", ip)
+func weirdIPv4(ipIn net.IP) {
+	ip := NewIPv4(ipIn)
 
-	n := binary.BigEndian.Uint32(ip)
-	fmt.Printf("%d\n", n)
-
-	octals := make([]string, 4)
-	hexes := make([]string, 4)
-	for i := 0; i < 4; i++ {
-		octals[i] = "0" + strconv.FormatUint(uint64(ip[i]), 8)
-		hexes[i] = "0x" + strconv.FormatUint(uint64(ip[i]), 16)
+	formats := []string{
+		ip.String(),
+		strconv.Itoa(int(ip.Uint32())),
+		ip.Octal(),
+		ip.Hex(),
+		ip.ClassA(),
+		ip.ClassB(),
+		ip.ClassC(),
+		ip.V6plusDoted(),
+		ip.V6(),
 	}
 
-	fmt.Println(strings.Join(octals, "."))
-	fmt.Println(strings.Join(hexes, "."))
-
-	weirdIPv6(ip.To16())
+	for _, format := range formats {
+		fmt.Println(format)
+	}
 }
 
 func weirdIPv6(ip net.IP) {
 	fmt.Printf("%s\n", ip)
+}
+
+type IPv4 net.IP
+
+func NewIPv4(ip net.IP) IPv4 {
+	return IPv4(ip.To4())
+}
+
+func (ip IPv4) String() string {
+	return net.IP(ip).String()
+}
+
+func (ip IPv4) Octal() string {
+	octals := make([]string, 4)
+	for i := 0; i < 4; i++ {
+		octals[i] = "0" + strconv.FormatUint(uint64(ip[i]), 8)
+	}
+
+	return strings.Join(octals, ".")
+}
+
+func (ip IPv4) Hex() string {
+	hexes := make([]string, 4)
+	for i := 0; i < 4; i++ {
+		hexes[i] = "0x" + strconv.FormatUint(uint64(ip[i]), 16)
+	}
+
+	return strings.Join(hexes, ".")
+}
+
+func (ip IPv4) V6plusDoted() string {
+	return fmt.Sprintf("::ffff:%s", ip)
+}
+
+func (ip IPv4) V6() string {
+	return fmt.Sprintf("::ffff:%02x%02x:%02x%02x", ip[0], ip[1], ip[2], ip[3])
+}
+
+func (ip IPv4) Uint32() uint32 {
+	return binary.BigEndian.Uint32(ip)
+}
+
+func (ip IPv4) ClassA() string {
+	return ip.classN(1)
+}
+
+func (ip IPv4) ClassB() string {
+	return ip.classN(2)
+}
+
+func (ip IPv4) ClassC() string {
+	return ip.classN(3)
+}
+
+func (ip IPv4) classN(n int) string {
+	parts := make([]string, 0, 4)
+	uparts := make([]byte, 4)
+	copy(uparts, ip)
+	for i := 0; i < n; i++ {
+		parts = append(parts, strconv.Itoa(int(ip[i])))
+		uparts[i] = 0
+	}
+
+	parts = append(parts, strconv.FormatUint(uint64(binary.BigEndian.Uint32(uparts)), 10))
+	return strings.Join(parts, ".")
 }
